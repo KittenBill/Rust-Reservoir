@@ -4,7 +4,7 @@ use std::thread;
 use reservoir_in_rust::{parallel_reservoir::*, simple_reservoir::*};
 
 #[test]
-fn simple_reservoir_quick_test() {
+pub fn simple_reservoir_quick_test() {
     let mut sr = SimpleReservoir::new(10);
 
     for i in 0..100000 {
@@ -15,7 +15,7 @@ fn simple_reservoir_quick_test() {
 }
 
 #[test]
-fn parallel_reservoir_quick_test() {
+pub fn parallel_reservoir_quick_test() {
     let mut pr = ParallelReservoir::new(10);
 
     let mut handles = Vec::new();
