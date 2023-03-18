@@ -1,15 +1,28 @@
+#[allow(dead_code)]
 
-use rand::{
-    prelude::*,
-    rngs::{ ThreadRng},
-};
+use rand::{prelude::*};
 
-pub struct SimpleReservoir<T> {
+pub struct SimpleReservoir<T>
+where
+    T: Clone
+{
     sample_count: usize, // number of samples
     total: usize,        // number of elements in total
 
     samples: Vec<T>,
-    rng: ThreadRng,
+    rng: StdRng,
+}
+
+pub trait Sampler<T> {
+    fn try_sample(&mut self, element: &T) -> bool;
+
+    fn get_sample_result(&self) -> SampleResult<T>;
+
+    fn try_sample_from(&mut self, mut it: Box<dyn Iterator<Item = T>>) {
+        while let Some(element) = it.next() {
+            self.try_sample(&element);
+        }
+    }
 }
 
 impl<T> SimpleReservoir<T>
@@ -21,11 +34,16 @@ where
             sample_count,
             total: 0,
             samples: Vec::with_capacity(sample_count),
-            rng: thread_rng(),
+            rng: StdRng::from_entropy(),
         }
     }
+}
 
-    pub fn try_sample(&mut self, element: &T) -> bool {
+impl<T> Sampler<T> for SimpleReservoir<T>
+where
+    T: Clone,
+{
+    fn try_sample(&mut self, element: &T) -> bool {
         if self.total < self.sample_count {
             self.samples.push(element.clone());
             self.total += 1;
@@ -47,7 +65,7 @@ where
         false
     }
 
-    pub fn get_sample_result(&self) -> SampleResult<T> {
+    fn get_sample_result(&self) -> SampleResult<T> {
         // 这里要求 T 拥有 Clone 特征，就不必担心 T 没有 clone() 可以调用
         SampleResult::new(self.samples.clone(), self.total)
     }
@@ -55,12 +73,16 @@ where
 
 #[derive(Debug)]
 pub struct SampleResult<T> {
-    samples: Vec<T>,
-    total: usize,
+    pub samples: Vec<T>,
+    pub total: usize,
 }
 
-impl<T> SampleResult<T> {
+impl<T> SampleResult<T>
+where
+    T: Clone,
+{
     pub fn new(samples: Vec<T>, total: usize) -> Self {
         Self { samples, total }
     }
 }
+
