@@ -11,7 +11,7 @@ use super::simple_reservoir::*;
 pub struct ParallelReservoir<T: Clone + Sync + Send> {
     sample_count: usize,
 
-    sampler_handles: Vec<Arc<Mutex<SimpleReservoir<T>>>>,
+    sampler_handles: Vec<Arc<SamplerHandle<T>>>,
 }
 
 impl<T> ParallelReservoir<T>
@@ -25,8 +25,8 @@ where
         }
     }
 
-    pub fn get_handle(&mut self) -> Arc<Mutex<SimpleReservoir<T>>> {
-        let handle = Arc::new(Mutex::new(SimpleReservoir::new(self.sample_count)));
+    pub fn get_handle(&mut self) -> Arc<SamplerHandle<T>> {
+        let handle = Arc::new(SamplerHandle::new(self.sample_count));
         self.sampler_handles.push(Arc::clone(&handle));
         handle
     }
@@ -36,13 +36,7 @@ where
         // this channel is used as a blocking queue
 
         for handle in self.sampler_handles.iter() {
-            tx.send(
-                handle
-                    .lock() //
-                    .unwrap()
-                    .get_sample_result(),
-            )
-            .unwrap();
+            tx.send(handle.get_sample_result()).unwrap();
         }
 
         let thread_count = self.sampler_handles.len();
@@ -95,7 +89,7 @@ where
     }
 }
 
-/* pub struct SamplerHandle<T>
+pub struct SamplerHandle<T>
 where
     T: Clone + Sync + Send,
 {
@@ -113,22 +107,30 @@ where
     }
 }
 
-impl<T> Sampler<T> for SamplerHandle<T>
+
+/**
+ * 本想给SamplerHandle实现Sampler特征，
+ * 但Sampler特征中的try_sample()需要的是self的可变借用，但在Arc不允许包裹的内容被可变借用
+ * 
+ * 一种解决方案是将Sampler中的方法改为不可变借用，再在SimpleReservoir的实现中使用RefCell以得到内部可变性
+ * https://course.rs/advance/smart-pointer/cell-refcell.html#%E5%86%85%E9%83%A8%E5%8F%AF%E5%8F%98%E6%80%A7
+ * 但这会导致SimpleReservoir中的三个可变字段都要包装，不太划算
+ */
+impl<T> SamplerHandle<T>
 where
     T: Clone + Sync + Send,
 {
-    fn get_sample_result(&self) -> SampleResult<T> {
+    pub fn get_sample_result(&self) -> SampleResult<T> {
         self.sampler
             .lock() // lock
             .unwrap()
             .get_sample_result()
     }
 
-    fn try_sample(&mut self, element: &T) -> bool {
+    pub fn try_sample(&self, element: &T) -> bool {
         self.sampler
             .lock() // lock
             .unwrap()
             .try_sample(element)
     }
 }
- */

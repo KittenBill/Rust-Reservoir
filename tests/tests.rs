@@ -1,13 +1,12 @@
 use std::thread;
-
-#[cfg(test)]
 use reservoir_in_rust::{parallel_reservoir::*, simple_reservoir::*};
 
+#[cfg(test)]
 #[test]
 pub fn simple_reservoir_quick_test() {
-    let mut sr = SimpleReservoir::new(10);
+    let mut sr = SimpleReservoir::new(1000);
 
-    for i in 0..100000 {
+    for i in 0..400_0000 {
         sr.try_sample(&i);
     }
 
@@ -16,16 +15,17 @@ pub fn simple_reservoir_quick_test() {
 
 #[test]
 pub fn parallel_reservoir_quick_test() {
-    let mut pr = ParallelReservoir::new(10);
+    let mut pr = ParallelReservoir::new(1000);
 
     let mut handles = Vec::new();
 
-    for s in 0..10 {
+    for s in 0..4 {
         let handle = pr.get_handle();
+        const ONE_THREAD: i32 = 100_0000;
         let t_handle = thread::spawn(move || {
-            let thread_start = s * 1000;
-            for i in thread_start..thread_start + 1000 {
-                handle.lock().unwrap().try_sample(&i);
+            let thread_start = s * ONE_THREAD;
+            for i in thread_start..thread_start + ONE_THREAD {
+                handle.try_sample(&i);
             }
         });
 
