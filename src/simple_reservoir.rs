@@ -1,10 +1,9 @@
 #[allow(dead_code)]
-
-use rand::{prelude::*};
+use rand::prelude::*;
 
 pub struct SimpleReservoir<T>
 where
-    T: Clone
+    T: Clone,
 {
     sample_count: usize, // number of samples
     total: usize,        // number of elements in total
@@ -16,7 +15,9 @@ where
 pub trait Sampler<T> {
     fn try_sample(&mut self, element: &T) -> bool;
 
-    fn get_sample_result(&self) -> SampleResult<T>;
+    fn get_sample_result(&self) -> Result<SampleResult<T>, String>;
+
+    fn have_sample_result(&self) -> bool;
 
     fn try_sample_from(&mut self, mut it: Box<dyn Iterator<Item = T>>) {
         while let Some(element) = it.next() {
@@ -65,9 +66,17 @@ where
         false
     }
 
-    fn get_sample_result(&self) -> SampleResult<T> {
+    fn get_sample_result(&self) -> Result<SampleResult<T>, String> {
         // 这里要求 T 拥有 Clone 特征，就不必担心 T 没有 clone() 可以调用
-        SampleResult::new(self.samples.clone(), self.total)
+        if !self.have_sample_result() {
+            return Err("Not enough elements to sample for a SimpleReservoir".to_string());
+        }
+
+        Ok(SampleResult::new(self.samples.clone(), self.total))
+    }
+
+    fn have_sample_result(&self) -> bool {
+        self.total >= self.sample_count
     }
 }
 
@@ -85,4 +94,3 @@ where
         Self { samples, total }
     }
 }
-

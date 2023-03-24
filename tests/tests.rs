@@ -1,5 +1,5 @@
-use std::thread;
 use reservoir_in_rust::{parallel_reservoir::*, simple_reservoir::*};
+use std::thread;
 
 #[cfg(test)]
 #[test]
@@ -19,7 +19,7 @@ pub fn parallel_reservoir_quick_test() {
 
     let mut handles = Vec::new();
 
-    for s in 0..4 {
+    for s in 0..8 {
         let handle = pr.get_handle();
         const ONE_THREAD: i32 = 100_0000;
         let t_handle = thread::spawn(move || {
@@ -35,5 +35,14 @@ pub fn parallel_reservoir_quick_test() {
         handle.join().unwrap();
     }
 
-    println!("{:?}", pr.get_sample_result());
+    let result = pr.get_sample_result().unwrap();
+
+    println!("{:?}", result);
+
+    let mut total: u128 = 0;
+    for x in result.samples.iter() {
+        total += *x as u128;
+    }
+
+    println!("AVG = {}", total / (result.samples.len() as u128));
 }

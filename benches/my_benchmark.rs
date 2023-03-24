@@ -8,7 +8,7 @@ pub fn criterion_benchmark(c: &mut Criterion) {
     // c.bench_function("fib 20", |b| b.iter(|| fibonacci(black_box(20))));
 
     const ONE_THREAD: usize = 100_0000;
-    const THREAD_COUNT: usize = 4;
+    const THREAD_COUNT: usize = 8;
     const SEQ_COUNT: usize = ONE_THREAD * THREAD_COUNT;
     const SAMPLE_COUNT: usize = 1000;
 

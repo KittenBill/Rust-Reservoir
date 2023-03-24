@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 #[allow(dead_code)]
 use std::{
     sync::{mpsc, Arc, Mutex},
@@ -31,12 +32,25 @@ where
         handle
     }
 
-    pub fn get_sample_result(&self) -> SampleResult<T> {
+    pub fn have_sample_result(&self) -> bool {
+        for handle in self.sampler_handles.iter() {
+            if !handle.have_sample_result() {
+                return false;
+            }
+        }
+        true
+    }
+
+    pub fn get_sample_result(&self) -> Result<SampleResult<T>, String> {
+        if !self.have_sample_result(){
+            return Err("Not enough elements in one or more Sampling Thread(s)".to_string());
+        }
+
         let (tx, rx) = mpsc::channel();
-        // this channel is used as a blocking queue
+        // this channel is used as BlockingQueue<SampleResult<T>>
 
         for handle in self.sampler_handles.iter() {
-            tx.send(handle.get_sample_result()).unwrap();
+            tx.send(handle.get_sample_result()?).unwrap();
         }
 
         let thread_count = self.sampler_handles.len();
@@ -51,22 +65,25 @@ where
 
             let sample_count = self.sample_count;
 
+            // merging thread
             let handle = thread::spawn(move || {
-                let mut rng = StdRng::from_entropy();
+
+                // RefCell 应用
+                let rng = RefCell::new(StdRng::from_entropy());
 
                 let possibility = (result1.total as f64) / (result1.total + result2.total) as f64;
 
                 let mut ret: Vec<T> = Vec::with_capacity(sample_count);
 
+                // closure 应用
                 let mut take_randomly = |v: &mut Vec<T>| {
-                    let mut rng = thread_rng();
-                    let idx = rng.gen_range(0_usize..v.len());
+                    let idx = rng.borrow_mut().gen_range(0_usize..v.len());
                     let take = v.swap_remove(idx);
                     ret.push(take);
                 };
 
                 for _ in 0..sample_count {
-                    if rng.gen_range(0_f64..1_f64) < possibility {
+                    if rng.borrow_mut().gen_range(0_f64..1_f64) < possibility {
                         take_randomly(&mut result1.samples);
                     } else {
                         take_randomly(&mut result2.samples);
@@ -76,7 +93,7 @@ where
                 tx_for_merger
                     .send(SampleResult::new(ret, result1.total + result2.total))
                     .unwrap();
-            }); // merger thread
+            }); // end of merging thread
 
             merger_handles.push(handle);
         }
@@ -85,7 +102,8 @@ where
             handle.join().unwrap();
         }
 
-        rx.recv().unwrap()
+        //assert(rx中只有一个SampleResult<T>)
+        Ok(rx.recv().unwrap())
     }
 }
 
@@ -107,11 +125,10 @@ where
     }
 }
 
-
 /**
  * 本想给SamplerHandle实现Sampler特征，
  * 但Sampler特征中的try_sample()需要的是self的可变借用，但在Arc不允许包裹的内容被可变借用
- * 
+ *
  * 一种解决方案是将Sampler中的方法改为不可变借用，再在SimpleReservoir的实现中使用RefCell以得到内部可变性
  * https://course.rs/advance/smart-pointer/cell-refcell.html#%E5%86%85%E9%83%A8%E5%8F%AF%E5%8F%98%E6%80%A7
  * 但这会导致SimpleReservoir中的三个可变字段都要包装，不太划算
@@ -120,11 +137,18 @@ impl<T> SamplerHandle<T>
 where
     T: Clone + Sync + Send,
 {
-    pub fn get_sample_result(&self) -> SampleResult<T> {
+    pub fn get_sample_result(&self) -> Result<SampleResult<T>, String> {
         self.sampler
             .lock() // lock
             .unwrap()
             .get_sample_result()
+    }
+
+    pub fn have_sample_result(&self) -> bool {
+        self.sampler
+            .lock() //lock
+            .unwrap()
+            .have_sample_result()
     }
 
     pub fn try_sample(&self, element: &T) -> bool {
