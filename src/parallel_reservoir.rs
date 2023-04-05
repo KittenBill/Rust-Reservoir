@@ -27,7 +27,9 @@ where
     }
 
     pub fn get_handle(&mut self) -> Arc<SamplerHandle<T>> {
-        let handle = Arc::new(SamplerHandle::new(self.sample_count));
+        let handle = Arc::new(SamplerHandle::new(Box::new(SimpleReservoir::new(
+            self.sample_count,
+        ))));
         self.sampler_handles.push(Arc::clone(&handle));
         handle
     }
@@ -67,7 +69,6 @@ where
 
             // merging thread
             let handle = thread::spawn(move || {
-
                 // RefCell 应用
                 let rng = RefCell::new(StdRng::from_entropy());
 
@@ -111,16 +112,25 @@ pub struct SamplerHandle<T>
 where
     T: Clone + Sync + Send,
 {
-    sampler: Mutex<SimpleReservoir<T>>,
+    // object safe: fn new() should not be in trait Sampler
+    sampler: Mutex<Box<dyn Sampler<T>>>,
 }
+
+
+/*
+实现Send的类型可以在线程间安全的传递其所有权
+实现Sync的类型可以在线程间安全的共享(通过引用)
+ */
+unsafe impl<T> Sync for SamplerHandle<T> where T: Clone + Sync + Send {}
+unsafe impl<T> Send for SamplerHandle<T> where T: Clone + Sync + Send {}
 
 impl<T> SamplerHandle<T>
 where
     T: Clone + Sync + Send,
 {
-    pub fn new(sample_count: usize) -> Self {
+    pub fn new(sampler: Box<dyn Sampler<T>>) -> Self {
         Self {
-            sampler: Mutex::new(SimpleReservoir::new(sample_count)),
+            sampler: Mutex::new(sampler),
         }
     }
 }
