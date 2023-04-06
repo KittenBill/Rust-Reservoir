@@ -67,6 +67,7 @@ where
 
             let sample_count = self.sample_count;
 
+            /* 使用线程池可能会更好？创建线程的时间开销太大 */
             // merging thread
             let handle = thread::spawn(move || {
                 // RefCell 应用
@@ -84,7 +85,7 @@ where
                 };
 
                 for _ in 0..sample_count {
-                    if rng.borrow_mut().gen_range(0_f64..1_f64) < possibility {
+                    if rng.borrow_mut().gen_range(0_f64..=1_f64) < possibility {
                         take_randomly(&mut result1.samples);
                     } else {
                         take_randomly(&mut result2.samples);
@@ -120,6 +121,9 @@ where
 /*
 实现Send的类型可以在线程间安全的传递其所有权
 实现Sync的类型可以在线程间安全的共享(通过引用)
+
+考虑到SamplerHandle所做的就是包装了一个Mutex，Mutex由Sync和Send特征
+所以SamplerHandle也拥有Sync和Send特征
  */
 unsafe impl<T> Sync for SamplerHandle<T> where T: Clone + Sync + Send {}
 unsafe impl<T> Send for SamplerHandle<T> where T: Clone + Sync + Send {}
