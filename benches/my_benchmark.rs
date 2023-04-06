@@ -19,38 +19,45 @@ pub fn criterion_benchmark(c: &mut Criterion) {
             sr.try_sample(&i);
         }
 
-        //println!("{:?}", sr.get_sample_result());
+        let _result = sr.get_sample_result();
     };
 
     let parallel = || {
         let mut pr = ParallelReservoir::new(SAMPLE_COUNT);
 
-        let mut handles = Vec::new();
+        let mut threads = Vec::new();
 
         for s in 0..THREAD_COUNT {
             let handle = pr.get_handle();
-            let t_handle = thread::spawn(move || {
+            
+            let sampler_thread = thread::spawn(move || {
                 let thread_start = s * ONE_THREAD;
                 for i in thread_start..thread_start + ONE_THREAD {
                     handle.try_sample(&i);
                 }
             });
 
-            handles.push(t_handle);
+            threads.push(sampler_thread);
         }
-        for handle in handles {
+        for handle in threads {
             handle.join().unwrap();
         }
 
-        //println!("{:?}", pr.get_sample_result());
+        /*
+        no get_sample_result() for Parallelreservoir => benchmark time of SimpleReservoir +17%
+        REASON UNKNOWN
+         */
+        let _result = pr.get_sample_result();
     };
 
-    c.bench_function(
-        "SEQUENCIAL", // The name should be unique among all of the benchmarks for your project
-        |b| b.iter(sequencial),
-    );
+    let mut group = c.benchmark_group("Reservoir Sampling");
+    
+    group.bench_function("PARALLEL", |b| b.iter(parallel));
 
-    c.bench_function("PARALLEL", |b| b.iter(parallel));
+    group.bench_function("SEQUENCIAL", |b| b.iter(sequencial));
+    
+    group.finish();
+    
 }
 
 criterion_group!(benches, criterion_benchmark);

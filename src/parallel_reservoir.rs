@@ -49,7 +49,7 @@ where
         }
 
         let (tx, rx) = mpsc::channel();
-        // this channel is used as BlockingQueue<SampleResult<T>>
+        // this channel is utilized to simulate BlockingQueue<SampleResult<T>>
 
         for handle in self.sampler_handles.iter() {
             tx.send(handle.get_sample_result()?).unwrap();
