@@ -114,7 +114,7 @@ where
     T: Clone + Sync + Send,
 {
     // object safe: fn new() should not be in trait Sampler
-    sampler: Mutex<Box<dyn Sampler<T>>>,
+    sampler: Mutex<Box<dyn Sampler<T> + Send>>,
 }
 
 
@@ -123,16 +123,34 @@ where
 实现Sync的类型可以在线程间安全的共享(通过引用)
 
 考虑到SamplerHandle所做的就是包装了一个Mutex，Mutex由Sync和Send特征
-所以SamplerHandle也拥有Sync和Send特征
+所以SamplerHandle也拥有Sync和Send特征，但sampler由SimpleReservoir<T>修改为Box<dyn Sampler<T>>后，SapmlerHandle不再默认实现Sync和Send了，
+原因如下：
+
+> Any type composed entirely of Send types is automatically marked as Send as well.
+> Almost all primitive types are Send, aside from raw pointers
+
+> Similar to Send, primitive types are Sync, and types composed entirely of types that are Sync are also Sync.
+
+> Implementing Send and Sync Manually Is Unsafe
+> Because types that are made up of Send and Sync traits are automatically also Send and Sync, we don’t have to implement those traits manually.
+
+[rust book](https://doc.rust-lang.org/book/ch16-04-extensible-concurrency-sync-and-send.html#extensible-concurrency-with-the-sync-and-send-traits)
+
+解决方案：将定义
+    sampler: Mutex<Box<dyn Sampler<T>>>,
+修改为
+    sampler: Mutex<Box<dyn Sampler<T> + Send>>,
+
  */
-unsafe impl<T> Sync for SamplerHandle<T> where T: Clone + Sync + Send {}
-unsafe impl<T> Send for SamplerHandle<T> where T: Clone + Sync + Send {}
+
+// unsafe impl<T> Sync for SamplerHandle<T> where T: Clone + Sync + Send {}
+// unsafe impl<T> Send for SamplerHandle<T> where T: Clone + Sync + Send {}
 
 impl<T> SamplerHandle<T>
 where
     T: Clone + Sync + Send,
 {
-    pub fn new(sampler: Box<dyn Sampler<T>>) -> Self {
+    pub fn new(sampler: Box<dyn Sampler<T> + Send>) -> Self {
         Self {
             sampler: Mutex::new(sampler),
         }
