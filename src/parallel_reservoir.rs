@@ -12,7 +12,7 @@ use super::simple_reservoir::*;
 pub struct ParallelReservoir<T: Clone + Sync + Send> {
     sample_count: usize,
 
-    sampler_handles: Vec<Arc<SamplerHandle<T>>>,
+    sampler_handles: Vec<Arc<Mutex<SimpleReservoir<T>>>>,
 }
 
 impl<T> ParallelReservoir<T>
@@ -26,17 +26,17 @@ where
         }
     }
 
-    pub fn get_sampler_handle(&mut self) -> Arc<SamplerHandle<T>> {
-        let handle = Arc::new(SamplerHandle::new(Box::new(SimpleReservoir::new(
+    pub fn get_sampler_handle(&mut self) -> Arc<Mutex<SimpleReservoir<T>>>{
+        let handle = Arc::new(Mutex::new(SimpleReservoir::new(
             self.sample_count,
-        ))));
-        self.sampler_handles.push(Arc::clone(&handle));
-        handle
+        )));
+        self.sampler_handles.push(handle);
+        self.sampler_handles.last().unwrap().clone()
     }
 
     pub fn have_sample_result(&self) -> bool {
         for handle in self.sampler_handles.iter() {
-            if !handle.have_sample_result() {
+            if !handle.lock().unwrap().have_sample_result() {
                 return false;
             }
         }
@@ -52,7 +52,7 @@ where
         // this channel is utilized to simulate BlockingQueue<SampleResult<T>>
 
         for handle in self.sampler_handles.iter() {
-            tx.send(handle.get_sample_result()?).unwrap();
+            tx.send(handle.lock().unwrap().get_sample_result()?).unwrap();
         }
 
         let thread_count = self.sampler_handles.len();
@@ -109,6 +109,7 @@ where
     }
 }
 
+/*
 pub struct SamplerHandle<T>
 where
     T: Clone + Sync + Send,
@@ -116,6 +117,7 @@ where
     // object safe: fn new() should not be in trait Sampler
     sampler: Mutex<Box<dyn Sampler<T> + Send>>,
 }
+*/
 
 /*
 实现Send的类型可以在线程间安全的传递其所有权
@@ -145,6 +147,7 @@ where
 // unsafe impl<T> Sync for SamplerHandle<T> where T: Clone + Sync + Send {}
 // unsafe impl<T> Send for SamplerHandle<T> where T: Clone + Sync + Send {}
 
+/*
 impl<T> SamplerHandle<T>
 where
     T: Clone + Sync + Send,
@@ -155,8 +158,9 @@ where
         }
     }
 }
+*/
 
-/**
+/*
  * 本想给SamplerHandle实现Sampler特征，
  * 但Sampler特征中的try_sample()需要的是self的可变借用，但在Arc不允许包裹的内容被可变借用
  *
@@ -164,6 +168,8 @@ where
  * https://course.rs/advance/smart-pointer/cell-refcell.html#%E5%86%85%E9%83%A8%E5%8F%AF%E5%8F%98%E6%80%A7
  * 但这会导致SimpleReservoir中的三个可变字段都要包装，不太划算
  */
+
+/*
 impl<T> SamplerHandle<T>
 where
     T: Clone + Sync + Send,
@@ -182,7 +188,7 @@ where
             .have_sample_result()
     }
 
-    pub fn try_sample(&self, element: &T) -> bool {
+    pub fn try_sample(&mut self, element: &T) -> bool {
         self.sampler
             .lock() // lock
             .unwrap()
@@ -196,3 +202,4 @@ where
             .try_sample_from(it)
     }
 }
+*/
