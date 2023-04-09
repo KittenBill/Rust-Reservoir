@@ -12,7 +12,7 @@ use super::simple_reservoir::*;
 pub struct ParallelReservoir<T: Clone + Sync + Send> {
     sample_count: usize,
 
-    sampler_handles: Vec<Arc<Mutex<SimpleReservoir<T>>>>,
+    sampler_handles: Vec<Arc<Mutex<Box<dyn Sampler<T> + Send>>>>,
 }
 
 impl<T> ParallelReservoir<T>
@@ -26,10 +26,10 @@ where
         }
     }
 
-    pub fn get_sampler_handle(&mut self) -> Arc<Mutex<SimpleReservoir<T>>>{
-        let handle = Arc::new(Mutex::new(SimpleReservoir::new(
+    pub fn get_sampler_handle(&mut self) -> Arc<Mutex<Box<dyn Sampler<T> + Send>>> {
+        let handle: Arc<Mutex<Box<dyn Sampler<T> + Send>>> = Arc::new(Mutex::new(Box::new(SimpleReservoir::new(
             self.sample_count,
-        )));
+        ))));
         self.sampler_handles.push(handle);
         self.sampler_handles.last().unwrap().clone()
     }
@@ -52,7 +52,8 @@ where
         // this channel is utilized to simulate BlockingQueue<SampleResult<T>>
 
         for handle in self.sampler_handles.iter() {
-            tx.send(handle.lock().unwrap().get_sample_result()?).unwrap();
+            tx.send(handle.lock().unwrap().get_sample_result()?)
+                .unwrap();
         }
 
         let thread_count = self.sampler_handles.len();
