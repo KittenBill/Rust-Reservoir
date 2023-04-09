@@ -26,7 +26,7 @@ where
         }
     }
 
-    pub fn get_handle(&mut self) -> Arc<SamplerHandle<T>> {
+    pub fn get_sampler_handle(&mut self) -> Arc<SamplerHandle<T>> {
         let handle = Arc::new(SamplerHandle::new(Box::new(SimpleReservoir::new(
             self.sample_count,
         ))));
@@ -44,7 +44,7 @@ where
     }
 
     pub fn get_sample_result(&self) -> Result<SampleResult<T>, String> {
-        if !self.have_sample_result(){
+        if !self.have_sample_result() {
             return Err("Not enough elements in one or more Sampling Thread(s)".to_string());
         }
 
@@ -117,7 +117,6 @@ where
     sampler: Mutex<Box<dyn Sampler<T> + Send>>,
 }
 
-
 /*
 实现Send的类型可以在线程间安全的传递其所有权
 实现Sync的类型可以在线程间安全的共享(通过引用)
@@ -188,5 +187,12 @@ where
             .lock() // lock
             .unwrap()
             .try_sample(element)
+    }
+
+    pub fn try_sample_from(&self, it: Box<dyn Iterator<Item = T>>) -> () {
+        self.sampler
+            .lock() // lock
+            .unwrap()
+            .try_sample_from(it)
     }
 }

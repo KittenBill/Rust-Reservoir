@@ -20,7 +20,7 @@ pub fn parallel_reservoir_quick_test() {
     let mut handles = Vec::new();
 
     for s in 0..8 {
-        let handle = pr.get_handle();
+        let handle = pr.get_sampler_handle();
         const ONE_THREAD: i32 = 100_0000;
         let t_handle = thread::spawn(move || {
             let thread_start = s * ONE_THREAD;

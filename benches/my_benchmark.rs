@@ -1,4 +1,4 @@
-use std::thread;
+use std::{thread};
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use reservoir_in_rust::{simple_reservoir::*, parallel_reservoir::ParallelReservoir};
@@ -28,16 +28,16 @@ pub fn criterion_benchmark(c: &mut Criterion) {
         let mut threads = Vec::new();
 
         for s in 0..THREAD_COUNT {
-            let handle = pr.get_handle();
+            let handle = pr.get_sampler_handle();
             
-            let sampler_thread = thread::spawn(move || {
+            let sampling_thread = thread::spawn(move || {
                 let thread_start = s * ONE_THREAD;
                 for i in thread_start..thread_start + ONE_THREAD {
                     handle.try_sample(&i);
                 }
-            });
+            });// sampling thread
 
-            threads.push(sampler_thread);
+            threads.push(sampling_thread);
         }
         for handle in threads {
             handle.join().unwrap();

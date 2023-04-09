@@ -19,7 +19,7 @@ pub trait Sampler<T> {
 
     fn have_sample_result(&self) -> bool;
 
-    fn try_sample_from(&mut self, mut it: Box<dyn Iterator<Item = T>>) {
+    fn try_sample_from(&mut self, mut it: Box<dyn Iterator<Item = T>>) -> (){
         while let Some(element) = it.next() {
             self.try_sample(&element);
         }
