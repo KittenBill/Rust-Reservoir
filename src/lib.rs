@@ -31,7 +31,7 @@ pub fn parallel_run() ->(){
         let sampling_thread = thread::spawn(move || {
             let thread_start = s * ONE_THREAD;
             for i in thread_start..thread_start + ONE_THREAD {
-                handle.try_sample(&i);
+                handle.lock().unwrap().try_sample(&i);
             }
         });// sampling thread
 

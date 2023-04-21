@@ -93,7 +93,7 @@ pub fn parallel_reservoir_validation() -> () {
             
             let sampler_thread = thread::spawn(move || {
                 for x in t_idx*STEP..(t_idx+1)*STEP{
-                    sampler.try_sample(&x);
+                    sampler.lock().unwrap().try_sample(&x);
                 }
             });
             sampler_threads.push(sampler_thread);
