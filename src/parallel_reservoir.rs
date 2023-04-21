@@ -61,10 +61,11 @@ where
         let mut merger_handles = Vec::new();
 
         for _ in 0..thread_count - 1 {
+            // 从通道中取出两个取样结果
             let mut result1 = rx.recv().unwrap();
             let mut result2 = rx.recv().unwrap();
 
-            // 为合并线程创建发送者
+            // 为合并线程创建发送者，以便将合并结果放入通道
             let tx_for_merger = tx.clone();
 
             let sample_count = self.sample_count;
