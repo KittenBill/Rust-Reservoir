@@ -60,16 +60,18 @@ where
         let mut merger_handles = Vec::new();
 
         for _ in 0..thread_count - 1 {
+            // 从通道中取出两个取样结果
             let mut result1 = rx.recv().unwrap();
             let mut result2 = rx.recv().unwrap();
 
+            // 为合并线程创建发送者，以便将合并结果放入通道
             let tx_for_merger = tx.clone();
 
             let sample_count = self.sample_count;
 
-            /* 使用线程池可能会更好？创建线程的时间开销太大 */
             // merging thread
             let handle = thread::spawn(move || {
+                // more code ...
                 // RefCell 应用
                 let rng = RefCell::new(StdRng::from_entropy());
 
