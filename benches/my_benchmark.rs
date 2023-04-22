@@ -1,7 +1,7 @@
-use std::{thread};
 
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use reservoir_in_rust::{simple_reservoir::*, parallel_reservoir::ParallelReservoir};
+
+use criterion::{criterion_group, criterion_main, Criterion};
+
 use reservoir_in_rust::*;
 
 //  The name of this function doesn't matter

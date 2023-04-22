@@ -1,14 +1,12 @@
 use reservoir_in_rust::{parallel_reservoir::*, simple_reservoir::*};
-use std::{thread, cell::RefCell};
+use std::{thread};
 
 #[cfg(test)]
 #[test]
 pub fn simple_reservoir_quick_test() {
     let mut sr = SimpleReservoir::new(1000);
 
-    for i in 0..400_0000 {
-        sr.try_sample(&i);
-    }
+    sr.try_sample_from(Box::new(0..40_0000));
 
     let result = sr.get_sample_result().unwrap();
     
