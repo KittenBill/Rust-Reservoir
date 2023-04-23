@@ -10,7 +10,7 @@ const THREAD_COUNT: usize = 8;
 const SEQ_COUNT: usize = ONE_THREAD * THREAD_COUNT;
 const SAMPLE_COUNT: usize = 1000;
 
-pub fn sequencial_run()->() {
+pub fn sequencial_run() {
     let mut sr = SimpleReservoir::new(SAMPLE_COUNT);
 
     for i in 0..SEQ_COUNT {
@@ -20,7 +20,7 @@ pub fn sequencial_run()->() {
     let _result = sr.get_sample_result();
 }
 
-pub fn parallel_run() ->(){
+pub fn parallel_run(){
     let mut pr = ParallelReservoir::new(SAMPLE_COUNT);
 
     let mut threads = Vec::new();

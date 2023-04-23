@@ -59,7 +59,7 @@ const SAMPLE_COUNT: usize = 100;
 const TEST_COUNT: usize = 1_0000;
 
 #[test]
-pub fn simple_reservoir_validation() -> () {
+pub fn simple_reservoir_validation() {
     let mut v: Vec<usize> = vec![0; RANGE];
 
     for _ in 0..TEST_COUNT {
@@ -78,7 +78,7 @@ pub fn simple_reservoir_validation() -> () {
 const THREAD_COUNT: usize = 4;
 
 #[test]
-pub fn parallel_reservoir_validation() -> () {
+pub fn parallel_reservoir_validation() {
     let mut v: Vec<usize> = vec![0; RANGE];
 
     for _ in 0..TEST_COUNT {
