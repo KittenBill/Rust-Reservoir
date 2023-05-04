@@ -6,9 +6,10 @@ use crate::parallel_reservoir::*;
 use std::thread;
 
 const ONE_THREAD: usize = 100_0000;
-const THREAD_COUNT: usize = 8;
+const THREAD_COUNT: usize = 4;
 const SEQ_COUNT: usize = ONE_THREAD * THREAD_COUNT;
-const SAMPLE_COUNT: usize = 1000;
+const SAMPLE_COUNT: usize = 1_0000;
+const MIDWAY_SAMPLE: usize = 0;
 
 pub fn sequencial_run() {
     let mut sr = SimpleReservoir::new(SAMPLE_COUNT);
@@ -37,6 +38,12 @@ pub fn parallel_run(){
 
         threads.push(sampling_thread);
     }
+
+    for _ in 0..MIDWAY_SAMPLE{
+        let _result = pr.get_sample_result();
+    }
+
+
     for handle in threads {
         handle.join().unwrap();
     }

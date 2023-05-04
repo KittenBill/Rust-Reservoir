@@ -12,7 +12,7 @@ use super::simple_reservoir::*;
 pub struct ParallelReservoir<T: Clone + Sync + Send> {
     sample_count: usize,
 
-    sampler_handles: Vec<Arc<Mutex<Box<dyn Sampler<T> + Send>>>>,
+    samplers: Vec<Arc<Mutex<Box<dyn Sampler<T> + Send>>>>,
 }
 
 impl<T> ParallelReservoir<T>
@@ -22,20 +22,20 @@ where
     pub fn new(sample_count: usize) -> Self {
         Self {
             sample_count,
-            sampler_handles: Vec::new(),
+            samplers: Vec::new(),
         }
     }
 
     pub fn get_sampler_handle(&mut self) -> Arc<Mutex<Box<dyn Sampler<T> + Send>>> {
-        let handle: Arc<Mutex<Box<dyn Sampler<T> + Send>>> = Arc::new(Mutex::new(Box::new(SimpleReservoir::new(
-            self.sample_count,
-        ))));
-        self.sampler_handles.push(handle);
-        self.sampler_handles.last().unwrap().clone()
+        let handle: Arc<Mutex<Box<dyn Sampler<T> + Send>>> = Arc::new(Mutex::new(Box::new(
+            SimpleReservoir::new(self.sample_count),
+        )));
+        self.samplers.push(handle);
+        self.samplers.last().unwrap().clone()
     }
 
     pub fn have_sample_result(&self) -> bool {
-        for handle in self.sampler_handles.iter() {
+        for handle in self.samplers.iter() {
             if !handle.lock().unwrap().have_sample_result() {
                 return false;
             }
@@ -51,52 +51,27 @@ where
         let (tx, rx) = mpsc::channel();
         // this channel is utilized to simulate BlockingQueue<SampleResult<T>>
 
-        for handle in self.sampler_handles.iter() {
+        for handle in self.samplers.iter() {
             tx.send(handle.lock().unwrap().get_sample_result()?)
                 .unwrap();
         }
 
-        let thread_count = self.sampler_handles.len();
+        let thread_count = self.samplers.len();
 
         let mut merger_handles = Vec::new();
 
         for _ in 0..thread_count - 1 {
             // 从通道中取出两个取样结果
-            let mut result1 = rx.recv().unwrap();
-            let mut result2 = rx.recv().unwrap();
+            let result1 = rx.recv().unwrap();
+            let result2 = rx.recv().unwrap();
 
             // 为合并线程创建发送者，以便将合并结果放入通道
             let tx_for_merger = tx.clone();
 
-            let sample_count = self.sample_count;
-
             // 创建合并线程
             let handle = thread::spawn(move || {
-                // more code ...
-                // RefCell 应用
-                let rng = RefCell::new(StdRng::from_entropy());
-
-                let possibility = (result1.total as f64) / (result1.total + result2.total) as f64;
-
-                let mut ret: Vec<T> = Vec::with_capacity(sample_count);
-
-                // closure 应用
-                let mut take_randomly = |v: &mut Vec<T>| {
-                    let idx = rng.borrow_mut().gen_range(0_usize..v.len());
-                    let take = v.swap_remove(idx);
-                    ret.push(take);
-                };
-
-                for _ in 0..sample_count {
-                    if rng.borrow_mut().gen_range(0_f64..=1_f64) < possibility {
-                        take_randomly(&mut result1.samples);
-                    } else {
-                        take_randomly(&mut result2.samples);
-                    }
-                }
-
                 tx_for_merger
-                    .send(SampleResult::new(ret, result1.total + result2.total))
+                    .send(Self::merge(result1, result2))
                     .unwrap();
             }); // end of merging thread
 
@@ -109,6 +84,31 @@ where
 
         //assert(rx中只有一个SampleResult<T>)
         Ok(rx.recv().unwrap())
+    }
+
+    fn merge(mut a: SampleResult<T>, mut b: SampleResult<T>) -> SampleResult<T> {
+        let sample_count = a.samples.len();
+        let rng = RefCell::new(StdRng::from_entropy());
+        let possibility = (a.total as f64) / (a.total + b.total) as f64;
+
+        let v: Vec<T> = Vec::with_capacity(sample_count);
+
+        // closure 应用
+        let take_randomly = |v: &mut Vec<T>| {
+            let idx = rng.borrow_mut().gen_range(0_usize..v.len());
+            let take = v.swap_remove(idx);
+            v.push(take);
+        };
+
+        for _ in 0..sample_count {
+            if rng.borrow_mut().gen_range(0_f64..=1_f64) < possibility {
+                take_randomly(&mut a.samples);
+            } else {
+                take_randomly(&mut b.samples);
+            }
+        }
+
+        SampleResult { samples: v, total: a.total + b.total }
     }
 }
 
