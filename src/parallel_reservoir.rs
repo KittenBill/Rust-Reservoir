@@ -9,10 +9,11 @@ use rand::{prelude::*, rngs::StdRng};
 
 use super::simple_reservoir::*;
 
+type SamplerHandle<T> = Arc<Mutex<SimpleReservoir<T>>>;
+
 pub struct ParallelReservoir<T: Clone + Sync + Send> {
     sample_count: usize,
-
-    samplers: Vec<Arc<Mutex<Box<dyn Sampler<T> + Send>>>>,
+    samplers: Vec<SamplerHandle<T>>,
 }
 
 impl<T> ParallelReservoir<T>
@@ -26,10 +27,10 @@ where
         }
     }
 
-    pub fn get_sampler_handle(&mut self) -> Arc<Mutex<Box<dyn Sampler<T> + Send>>> {
-        let handle: Arc<Mutex<Box<dyn Sampler<T> + Send>>> = Arc::new(Mutex::new(Box::new(
+    pub fn get_sampler_handle(&mut self) -> SamplerHandle<T> {
+        let handle: SamplerHandle<T> = Arc::new(Mutex::new(
             SimpleReservoir::new(self.sample_count),
-        )));
+        ));
         self.samplers.push(handle);
         self.samplers.last().unwrap().clone()
     }
