@@ -9,27 +9,30 @@ use rand::{prelude::*, rngs::StdRng};
 
 use super::simple_reservoir::*;
 
-type SamplerHandle<T> = Arc<Mutex<SimpleReservoir<T>>>;
+type SamplerHandle<T> = Arc<Mutex<ReservoirSampler<T>>>;
 
-pub struct ParallelReservoir<T: Clone + Sync + Send> {
-    sample_count: usize,
+pub struct ParallelReservoirSampler<T: Clone + Sync + Send> {
+    sample_size: usize,
     samplers: Vec<SamplerHandle<T>>,
 }
 
-impl<T> ParallelReservoir<T>
+impl<T> ParallelReservoirSampler<T>
 where
     T: Clone + Sync + Send + 'static, // todo: fix the lifetime bounds here
 {
-    pub fn new(sample_count: usize) -> Self {
+    pub fn new(sample_size: usize) -> Self {
+        if sample_size <= 0 {
+            panic!("sample_size should > 0");
+        }
         Self {
-            sample_count,
+            sample_size,
             samplers: Vec::new(),
         }
     }
 
     pub fn get_sampler_handle(&mut self) -> SamplerHandle<T> {
         let handle: SamplerHandle<T> = Arc::new(Mutex::new(
-            SimpleReservoir::new(self.sample_count),
+            ReservoirSampler::new(self.sample_size),
         ));
         self.samplers.push(handle);
         self.samplers.last().unwrap().clone()
@@ -90,7 +93,7 @@ where
     fn merge(mut a: SampleResult<T>, mut b: SampleResult<T>) -> SampleResult<T> {
         let sample_count = a.samples.len();
         let rng = RefCell::new(StdRng::from_entropy());
-        let possibility = (a.total as f64) / (a.total + b.total) as f64;
+        let possibility = (a.population as f64) / (a.population + b.population) as f64;
 
         let v: Vec<T> = Vec::with_capacity(sample_count);
 
@@ -109,7 +112,7 @@ where
             }
         }
 
-        SampleResult { samples: v, total: a.total + b.total }
+        SampleResult { samples: v, population: a.population + b.population }
     }
 }
 

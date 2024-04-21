@@ -1,8 +1,8 @@
 pub mod parallel_reservoir;
 pub mod simple_reservoir;
-use crate::simple_reservoir::{Sampler, SimpleReservoir};
+use crate::simple_reservoir::{Sampler, ReservoirSampler};
 fn main() {
-    let mut reservoir: SimpleReservoir<i32> = SimpleReservoir::new(10);
+    let mut reservoir: ReservoirSampler<i32> = ReservoirSampler::new(10);
     for i in 0_i32..100000{
         reservoir.try_sample(&i);
     }

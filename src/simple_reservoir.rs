@@ -1,12 +1,12 @@
 #[allow(dead_code)]
 use rand::prelude::*;
 
-pub struct SimpleReservoir<T>
+pub struct ReservoirSampler<T>
 where
     T: Clone,
 {
-    sample_count: usize, // number of samples
-    total: usize,        // number of elements in total
+    sample_size: usize, // number of samples
+    population: usize,        // number of elements in total
 
     samples: Vec<T>,
     rng: StdRng,
@@ -26,38 +26,46 @@ pub trait Sampler<T> {
     }
 }
 
-impl<T> SimpleReservoir<T>
+impl<T> ReservoirSampler<T>
 where
     T: Clone,
 {
-    pub fn new(sample_count: usize) -> Self {
+    /// creates a simple reservoir sampler
+    /// 
+    /// # Panics
+    /// 
+    /// this function panics when sample_size is less or equal to 0
+    pub fn new(sample_size: usize) -> Self {
+        if sample_size <= 0 {
+            panic!("sample_size should > 0");
+        }
         Self {
-            sample_count,
-            total: 0,
-            samples: Vec::with_capacity(sample_count),
+            sample_size,
+            population: 0,
+            samples: Vec::with_capacity(sample_size),
             rng: StdRng::from_entropy(),
         }
     }
 }
 
-impl<T> Sampler<T> for SimpleReservoir<T>
+impl<T> Sampler<T> for ReservoirSampler<T>
 where
     T: Clone,
 {
     fn try_sample(&mut self, element: &T) -> bool {
-        if self.total < self.sample_count {
+        if self.population < self.sample_size {
             self.samples.push(element.clone());
-            self.total += 1;
+            self.population += 1;
             return true;
         }
 
-        self.total += 1;
+        self.population += 1;
 
         let coin: f64 = self.rng.gen_range(0.0..=1.0);
-        if (self.sample_count as f64) / (self.total as f64) > coin {
+        if (self.sample_size as f64) / (self.population as f64) > coin {
             // keep the new element
 
-            let idx: usize = self.rng.gen_range(0..self.sample_count);
+            let idx: usize = self.rng.gen_range(0..self.sample_size);
             self.samples[idx] = element.clone();
 
             return true;
@@ -72,25 +80,25 @@ where
             return Err("Not enough elements to sample for a SimpleReservoir".to_string());
         }
 
-        Ok(SampleResult::new(self.samples.clone(), self.total))
+        Ok(SampleResult::new(self.samples.clone(), self.population))
     }
 
     fn have_sample_result(&self) -> bool {
-        self.total >= self.sample_count
+        self.population >= self.sample_size
     }
 }
 
 #[derive(Debug)]
 pub struct SampleResult<T> {
     pub samples: Vec<T>,
-    pub total: usize,
+    pub population: usize,
 }
 
 impl<T> SampleResult<T>
 where
     T: Clone,
 {
-    pub fn new(samples: Vec<T>, total: usize) -> Self {
-        Self { samples, total }
+    pub fn new(samples: Vec<T>, population: usize) -> Self {
+        Self { samples, population }
     }
 }

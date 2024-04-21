@@ -13,7 +13,7 @@ const SAMPLE_COUNT: usize = 1_0000;
 const MIDWAY_SAMPLE: usize = 0;
 
 pub fn sequencial_run() {
-    let mut sr = SimpleReservoir::new(SAMPLE_COUNT);
+    let mut sr = ReservoirSampler::new(SAMPLE_COUNT);
 
     for i in 0..SEQ_COUNT {
         sr.try_sample(&i);
@@ -23,7 +23,7 @@ pub fn sequencial_run() {
 }
 
 pub fn parallel_run() {
-    let mut pr = ParallelReservoir::new(SAMPLE_COUNT);
+    let mut pr = ParallelReservoirSampler::new(SAMPLE_COUNT);
 
     let mut threads = Vec::new();
 
@@ -45,7 +45,7 @@ pub fn parallel_run() {
         let result = pr.get_sample_result();
         if let Ok(sr) = result {
             midway_sample_cnt += 1;
-            if sr.total == SEQ_COUNT {
+            if sr.population == SEQ_COUNT {
                 //println!("mid way sample at end");
             }
         } else {

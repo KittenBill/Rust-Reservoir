@@ -21,7 +21,7 @@ pub fn simple_reservoir_validation() {
     let mut v: Vec<usize> = vec![0; RANGE];
 
     for _ in 0..TEST_COUNT {
-        let mut sr = SimpleReservoir::new(SAMPLE_COUNT);
+        let mut sr = ReservoirSampler::new(SAMPLE_COUNT);
         for x in 0..RANGE {
             sr.try_sample(&x);
         }
@@ -40,7 +40,7 @@ pub fn parallel_reservoir_validation() {
     let mut v: Vec<usize> = vec![0; RANGE];
 
     for _ in 0..TEST_COUNT {
-        let mut pr = ParallelReservoir::new(SAMPLE_COUNT);
+        let mut pr = ParallelReservoirSampler::new(SAMPLE_COUNT);
 
         const STEP:usize = RANGE / THREAD_COUNT;
         let mut sampler_threads = Vec::with_capacity(THREAD_COUNT);
