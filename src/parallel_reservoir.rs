@@ -91,28 +91,28 @@ where
     }
 
     fn merge(mut a: SampleResult<T>, mut b: SampleResult<T>) -> SampleResult<T> {
-        let sample_count = a.samples.len();
-        let rng = RefCell::new(StdRng::from_entropy());
-        let possibility = (a.population as f64) / (a.population + b.population) as f64;
+        let sample_size = a.samples.len();
+        let mut rng = StdRng::from_entropy();
+        let probability = (a.population as f64) / (a.population + b.population) as f64;
 
-        let v: Vec<T> = Vec::with_capacity(sample_count);
+        let mut merged_samples: Vec<T> = Vec::with_capacity(sample_size);
 
         // closure 应用
-        let take_randomly = |v: &mut Vec<T>| {
-            let idx = rng.borrow_mut().gen_range(0_usize..v.len());
-            let take = v.swap_remove(idx);
-            v.push(take);
+        let mut take_randomly = |v: &mut Vec<T>, rng: &mut StdRng| {
+            let idx = rng.gen_range(0_usize..v.len());
+            let item = v.swap_remove(idx);
+            merged_samples.push(item);
         };
 
-        for _ in 0..sample_count {
-            if rng.borrow_mut().gen_range(0_f64..=1_f64) < possibility {
-                take_randomly(&mut a.samples);
+        for _ in 0..sample_size {
+            if rng.gen_range(0_f64..=1_f64) < probability {
+                take_randomly(&mut a.samples, &mut rng);
             } else {
-                take_randomly(&mut b.samples);
+                take_randomly(&mut b.samples, &mut rng);
             }
         }
 
-        SampleResult { samples: v, population: a.population + b.population }
+        SampleResult { samples: merged_samples, population: a.population + b.population }
     }
 }
 
